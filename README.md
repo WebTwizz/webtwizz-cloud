@@ -48,6 +48,8 @@ npm run build
 
 Sites pin an exact version, so a release never changes a live site until WebTwizz upgrades it.
 
+The WebTwizz AI builds from its own copy of AI_GUIDE.md. After a release, run `npm run cloud:sync <version>` in the ai-service so new sites get that version and its guide.
+
 ## License
 
 MIT
