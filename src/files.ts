@@ -58,11 +58,12 @@ export function createFiles() {
   const writer = client('WEBTWIZZ_STORAGE_KEY', 'WEBTWIZZ_STORAGE_SECRET');
   let reader: S3Client | undefined;
   const maxFileMb = Number(process.env.WEBTWIZZ_STORAGE_MAX_FILE_MB) || 0;
+  const onFilesAddress = (url: string) => (url.startsWith(`${endpoint}/`) ? filesUrl + url.slice(endpoint.length) : url);
 
   return {
     maxFileMb,
 
-    /** A 5-minute link the browser PUTs the file to, with the exact headers it must send. */
+    /** A 5-minute link on the files address the browser PUTs the file to, with the exact headers it must send. */
     async uploadUrl({ bucket, name, type, size, folder, accept }: UploadRequest): Promise<Upload> {
       if (maxFileMb && size > maxFileMb * 1024 * 1024) throw new FileError('too_large', MESSAGES.fileTooLarge(maxFileMb));
       if (accept && !accepts(type, accept)) throw new FileError('type', MESSAGES.fileType);
@@ -77,11 +78,11 @@ export function createFiles() {
         ContentLength: size,
         CacheControl: headers['Cache-Control'],
       });
-      const url = await getSignedUrl(writer, command, {
+      const signed = await getSignedUrl(writer, command, {
         expiresIn: 300,
         signableHeaders: new Set(['content-type', 'content-length']),
       });
-      return { url, key, headers };
+      return { url: onFilesAddress(signed), key, headers };
     },
 
     publicUrl(key: string): string {
@@ -96,8 +97,7 @@ export function createFiles() {
         Key: key,
         ResponseContentDisposition: download ? `attachment; filename="${safeName(download)}"` : undefined,
       });
-      const url = await getSignedUrl(reader, command, { expiresIn });
-      return url.startsWith(`${endpoint}/`) ? filesUrl + url.slice(endpoint.length) : url;
+      return onFilesAddress(await getSignedUrl(reader, command, { expiresIn }));
     },
 
     async remove(bucket: Bucket, key: string): Promise<void> {

@@ -23,6 +23,12 @@ async function api<T = any>(method: string, path: string, body?: unknown): Promi
   }
 }
 
+/** The files.webtwizz.app address for a storage host, as the app makes it (FileLinks::base). */
+function filesAddress(endpoint: string): string {
+  const id = /^(br-[a-z0-9-]+)\.storage\.(?:(c-\d+)\.)?([a-z]{2}-[a-z]+-\d)\./.exec(new URL(endpoint).host);
+  return id ? `https://files.webtwizz.app/${[id[1], id[2], id[3]].filter(Boolean).join('.')}` : endpoint;
+}
+
 function pooled(uri: string): string {
   const url = new URL(uri);
   const [endpoint, ...rest] = url.hostname.split('.');
@@ -54,7 +60,11 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
     process.env.WEBTWIZZ_AUTH_SECRET = crypto.randomUUID() + crypto.randomUUID();
     await api('POST', `/projects/${projectId}/branches/${branchId}/auth/domains`, { domain: ORIGIN, auth_provider: 'better_auth' }).catch(() => {});
 
-    const state = await api('GET', `/projects/${projectId}/branches/${branchId}/storage`).catch(() => ({ enabled: false }));
+    let state: any = { enabled: false };
+    for (let attempt = 0; attempt < 30 && !(state.enabled && state.s3_endpoint); attempt++) {
+      if (attempt) await new Promise((resolve) => setTimeout(resolve, 3000));
+      state = await api('GET', `/projects/${projectId}/branches/${branchId}/storage`).catch(() => ({ enabled: false }));
+    }
     if (state.enabled && state.s3_endpoint) {
       await api('POST', `/projects/${projectId}/branches/${branchId}/buckets`, { name: 'public', access_level: 'public_read' });
       await api('POST', `/projects/${projectId}/branches/${branchId}/buckets`, { name: 'private', access_level: 'private' });
@@ -68,6 +78,7 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
         WEBTWIZZ_STORAGE_READ_KEY: read.token_id,
         WEBTWIZZ_STORAGE_READ_SECRET: read.s3_secret_access_key,
         WEBTWIZZ_STORAGE_MAX_FILE_MB: '1',
+        WEBTWIZZ_FILES_URL: filesAddress(state.s3_endpoint),
       });
       storage = true;
     }
@@ -127,6 +138,7 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
   });
 
   it('keeps a visitor signed in across a real Next app: route handler, server component and proxy', async (context) => {
+    if (!existsSync('test/fixture/.next/BUILD_ID') && process.env.CI) throw new Error('Build test/fixture before this test.');
     if (!existsSync('test/fixture/.next/BUILD_ID')) context.skip();
     const port = 3100;
     const app: ChildProcess = spawn('npx', ['next', 'start', '-p', String(port)], { cwd: 'test/fixture', env: process.env, stdio: 'ignore' });
@@ -158,12 +170,17 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
   });
 
   it('uploads through a signed link that holds the size, and reads it back', async (context) => {
+    if (!storage && process.env.CI) throw new Error('File storage never came up on the throwaway project.');
     if (!storage) context.skip();
     const { createFiles } = await import('../../dist/files.js');
     const files = createFiles();
     const body = new TextEncoder().encode('hello from ci');
 
     const pub = await files.uploadUrl({ bucket: 'public', name: 'hello.txt', type: 'text/plain', size: body.length });
+    expect(new URL(pub.url).host).toBe(new URL(process.env.WEBTWIZZ_FILES_URL!).host);
+    const preflight = await fetch(pub.url, { method: 'OPTIONS', headers: { origin: 'https://example.webtwizz.app', 'access-control-request-method': 'PUT', 'access-control-request-headers': 'content-type,cache-control' } });
+    expect(preflight.ok, `preflight ${preflight.status}`).toBe(true);
+    expect(preflight.headers.get('access-control-allow-methods') || '').toMatch(/PUT/);
     expect((await fetch(pub.url, { method: 'PUT', headers: pub.headers, body })).status).toBe(200);
     expect(await (await fetch(files.publicUrl(pub.key))).text()).toBe('hello from ci');
 
@@ -176,6 +193,7 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
     expect(await (await fetch(await files.privateUrl(priv.key))).text()).toBe('hello from ci');
 
     await files.remove('private', priv.key);
-    expect((await fetch(await files.privateUrl(priv.key))).ok).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    expect((await fetch(await files.privateUrl(priv.key))).ok, 'a fresh link to a removed file').toBe(false);
   });
 });

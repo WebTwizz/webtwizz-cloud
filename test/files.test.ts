@@ -20,8 +20,7 @@ describe('files', () => {
   it('signs an upload to the storage endpoint that holds the size and type', async () => {
     const upload = await createFiles().uploadUrl({ bucket: 'public', name: 'My Photo (1).JPG', type: 'image/jpeg', size: 1234, folder: 'user-1' });
     const url = new URL(upload.url);
-    expect(url.origin).toBe(ENDPOINT);
-    expect(url.pathname).toBe(`/public/${upload.key}`);
+    expect(url.origin + url.pathname).toBe(`https://files.example.com/br-test/public/${upload.key}`);
     expect(upload.key).toMatch(/^user-1\/[0-9a-f-]{36}-My-Photo-1-.JPG$/);
     expect(url.searchParams.get('X-Amz-SignedHeaders')).toContain('content-length');
     expect(url.searchParams.get('X-Amz-SignedHeaders')).toContain('content-type');
@@ -56,6 +55,7 @@ describe('files', () => {
   it('falls back to the endpoint when there is no files address', async () => {
     delete process.env.WEBTWIZZ_FILES_URL;
     expect(createFiles().publicUrl('a.png')).toBe(`${ENDPOINT}/public/a.png`);
+    expect((await createFiles().uploadUrl({ bucket: 'public', name: 'a.png', type: 'image/png', size: 1 })).url.startsWith(`${ENDPOINT}/public/`)).toBe(true);
     expect((await createFiles().privateUrl('a.pdf')).startsWith(`${ENDPOINT}/private/a.pdf?`)).toBe(true);
   });
 
