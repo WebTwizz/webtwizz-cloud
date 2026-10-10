@@ -28,6 +28,8 @@ function pooled(uri: string): string {
   return url.toString();
 }
 
+if (!key && process.env.CI) throw new Error('NEON_API_KEY is missing, so CI would pass without testing anything.');
+
 describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
   let projectId = '';
   let branchId = '';
