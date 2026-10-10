@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.tgz
+test/fixture/.next
+test/fixture/node_modules
+test/fixture/package-lock.json
+test/fixture/next-env.d.ts

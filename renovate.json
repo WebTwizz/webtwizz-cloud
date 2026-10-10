@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": "3 days",
+  "prConcurrentLimit": 5,
+  "schedule": ["before 6am on monday", "before 6am on thursday"],
+  "packageRules": [
+    {
+      "matchPackageNames": ["@neondatabase/auth"],
+      "groupName": "sign-ins",
+      "automerge": false
+    },
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "matchPackageNames": ["!@neondatabase/auth"],
+      "automerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    },
+    {
+      "matchFileNames": ["test/fixture/package.json"],
+      "groupName": "fixture app",
+      "automerge": true
+    }
+  ],
+  "vulnerabilityAlerts": { "minimumReleaseAge": null, "automerge": true }
+}

@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      next:
+        description: Publish this commit as a next build to try on a test site
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+
+jobs:
+  latest:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Version
+        id: version
+        run: |
+          ls .changeset/*.md | grep -qv README.md || node scripts/dependency-changeset.mjs
+          if ! ls .changeset/*.md | grep -qv README.md; then
+            echo "Nothing to release."
+            exit 0
+          fi
+          npx changeset version
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Publish
+        if: steps.version.outputs.version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release ${{ steps.version.outputs.version }}"
+          npm run release
+          git push origin HEAD:main --follow-tags
+
+  next:
+    if: github.event_name == 'workflow_dispatch' && inputs.next
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm test
+      - run: npm version "$(node -p "require('./package.json').version")-next.${GITHUB_RUN_NUMBER}" --no-git-tag-version
+      - run: npm run build && npm publish --tag next
