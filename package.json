@@ -51,7 +51,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "npm run build && vitest run --config vitest.integration.config.ts",
-    "release": "npm run build && changeset publish",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "engines": {
