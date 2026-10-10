@@ -59,6 +59,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test:integration
+      - run: npm run build && npm pack
+      - working-directory: test/fixture
+        run: npm install --no-audit --no-fund ../../webtwizz-cloud-*.tgz && npx next build
+      - run: npx vitest run --config vitest.integration.config.ts
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
