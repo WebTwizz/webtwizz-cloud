@@ -1,6 +1,6 @@
 {
   "name": "@webtwizz/cloud",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Sign-ins, database and file storage for sites built on WebTwizz Cloud",
   "license": "MIT",
   "type": "module",
