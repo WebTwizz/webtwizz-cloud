@@ -41,6 +41,8 @@ if (error) setMessage(authMessage(error));
 
 For wording that fits the site, pass overrides: `authMessage(error, { USER_ALREADY_EXISTS: 'You already have a booking account.' })`.
 
+When the owner turns on Confirm email, sign-up returns no session and the 6-digit code is emailed automatically. Show a code step: `authClient.emailOtp.verifyEmail({ email, otp })`, then sign them in, with a "Send a new code" button that calls `authClient.emailOtp.sendVerificationOtp({ email, type: 'email-verification' })`. Never send the first code yourself.
+
 5. Protect pages in `src/proxy.ts`, listing only the protected routes in the matcher (a matcher over every path blocks the sign-in page's own scripts):
 
 ```ts

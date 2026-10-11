@@ -46,3 +46,38 @@ describe('forBrowser', () => {
     expect(response.headers.get('location')).toBe('https://example.com/');
   });
 });
+
+describe('sign-up code', () => {
+  it('asks for the code after a sign-up that needs confirming, and only then', async () => {
+    process.env.WEBTWIZZ_AUTH_URL = 'https://auth.example.com/app/auth';
+    process.env.WEBTWIZZ_AUTH_SECRET = 'x'.repeat(40);
+    const sent: Array<{ url: string; body: string; origin: string | null }> = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.endsWith('/email-otp/send-verification-otp')) {
+        sent.push({ url, body: String(init?.body), origin: new Headers(init?.headers).get('origin') });
+        return new Response('{"success":true}');
+      }
+      const path = new URL(url).pathname;
+      const verified = path.endsWith('/sign-in/email');
+      return new Response(JSON.stringify({ token: verified ? 't' : null, user: { email: 'new@example.com', emailVerified: verified } }), { headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    try {
+      const { POST } = createAuth().handler();
+      const post = (path: string) => POST(
+        new Request(`https://site.example.com/api/auth/${path}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://site.example.com' }, body: '{"email":"new@example.com","password":"x"}' }),
+        { params: Promise.resolve({ path: path.split('/') }) },
+      );
+      await post('sign-up/email');
+      expect(sent).toHaveLength(1);
+      expect(sent[0].url).toBe('https://auth.example.com/app/auth/email-otp/send-verification-otp');
+      expect(JSON.parse(sent[0].body)).toEqual({ email: 'new@example.com', type: 'email-verification' });
+      expect(sent[0].origin).toBe('https://site.example.com');
+      await post('sign-in/email');
+      expect(sent).toHaveLength(1);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});

@@ -46,9 +46,22 @@ export function forBrowser<T extends Response>(response: T): T {
   }
 }
 
+/** After a sign-up that still needs confirming, asks for the code so it goes out through WebTwizz's emails. */
+async function sendSignUpCode(baseUrl: string, request: Request, response: Response): Promise<void> {
+  const data = await response.clone().json().catch(() => null);
+  const email = data?.user?.email;
+  if (!email || data.user.emailVerified !== false || data.token) return;
+  await fetch(`${baseUrl.replace(/\/+$/, '')}/email-otp/send-verification-otp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: request.headers.get('origin') || new URL(request.url).origin },
+    body: JSON.stringify({ email, type: 'email-verification' }),
+  }).catch((error) => console.error('[webtwizz-auth] Could not send the sign-up code', error));
+}
+
 export function createAuth(options: AuthOptions = {}): Auth {
+  const baseUrl = options.url ?? env('WEBTWIZZ_AUTH_URL');
   const auth = createNeonAuth({
-    baseUrl: options.url ?? env('WEBTWIZZ_AUTH_URL'),
+    baseUrl,
     cookies: {
       secret: options.secret ?? env('WEBTWIZZ_AUTH_SECRET'),
       sessionDataTtl: options.sessionDataTtl,
@@ -62,7 +75,14 @@ export function createAuth(options: AuthOptions = {}): Auth {
     type Method = (typeof methods)['GET'];
     const wrap = (method: Method): Method => async (request, context) =>
       forBrowser(await method(forLibrary(request, (original, headers) => new Request(original, { headers })), context));
-    return { GET: wrap(methods.GET), POST: wrap(methods.POST), PUT: wrap(methods.PUT), DELETE: wrap(methods.DELETE), PATCH: wrap(methods.PATCH) };
+    const post = wrap(methods.POST);
+    const signUp: Method = async (request, context) => {
+      const response = await post(request, context);
+      const { path } = await context.params;
+      if (response.ok && path?.join('/') === 'sign-up/email') await sendSignUpCode(baseUrl, request, response);
+      return response;
+    };
+    return { GET: wrap(methods.GET), POST: signUp, PUT: wrap(methods.PUT), DELETE: wrap(methods.DELETE), PATCH: wrap(methods.PATCH) };
   };
   auth.middleware = (config) => {
     const run = middleware(config);
