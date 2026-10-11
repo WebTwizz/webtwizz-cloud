@@ -61,8 +61,8 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
     await api('POST', `/projects/${projectId}/branches/${branchId}/auth/domains`, { domain: ORIGIN, auth_provider: 'better_auth' }).catch(() => {});
 
     let state: any = { enabled: false };
-    for (let attempt = 0; attempt < 30 && !(state.enabled && state.s3_endpoint); attempt++) {
-      if (attempt) await new Promise((resolve) => setTimeout(resolve, 3000));
+    for (let attempt = 0; attempt < 60 && !(state.enabled && state.s3_endpoint); attempt++) {
+      if (attempt) await new Promise((resolve) => setTimeout(resolve, 4000));
       state = await api('GET', `/projects/${projectId}/branches/${branchId}/storage`).catch(() => ({ enabled: false }));
     }
     if (state.enabled && state.s3_endpoint) {
