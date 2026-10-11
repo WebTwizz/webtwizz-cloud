@@ -14,9 +14,10 @@ WebTwizz puts every setting in the site's environment, so each module works with
 | `@webtwizz/cloud/server` | `createAuth()` with `.handler()`, `.middleware()`, `.getSession()` and the server sign-in methods |
 | `@webtwizz/cloud/client` | `createAuthClient()` for client components |
 | `@webtwizz/cloud/db` | `createDb()`, a `postgres` client with pooler-safe settings |
+| `@webtwizz/cloud/emails` | `handleSignInEmails()` for sites that send their own sign-in emails, `signInEmailCopy()` for the wording |
 | `@webtwizz/cloud/files` | `createFiles()` with `uploadUrl`, `publicUrl`, `privateUrl`, `remove` |
 
-`server`, `db` and `files` are server-only. [AI_GUIDE.md](AI_GUIDE.md) has the full walkthrough and ships with each version.
+`server`, `db`, `files` and `emails` are server-only. [AI_GUIDE.md](AI_GUIDE.md) has the full walkthrough and ships with each version.
 
 ## Environment
 

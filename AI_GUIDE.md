@@ -70,6 +70,21 @@ Sign-ins are email and password only. Sign-in emails (reset codes, confirmations
 
 Sites built before this package import sign-ins from another package in `src/lib/auth/`. When you work on their sign-ins, move `server.ts`, `client.ts` and the auth route to the files above (same sign-ins, same users) and remove the old package.
 
+### Sending sign-in emails yourself
+
+Only when the owner picked "Your site" under Cloud > Users > Emails. Add `src/app/api/sign-in-emails/route.ts`; the site's sign-in service calls it with every code, and the package checks the call really comes from it:
+
+```ts
+import { handleSignInEmails, signInEmailCopy } from '@webtwizz/cloud/emails';
+
+export const POST = handleSignInEmails(async (email) => {
+  const { subject, text } = signInEmailCopy(email, 'Site name');
+  // send `subject` and `text` to `email.to` with the site's email connector, e.g. Resend
+});
+```
+
+`email` has `to`, `kind` ('code' or 'link'), `purpose` ('email-verification', 'forget-password' or 'sign-in'), and `code` or `link`. Throw if sending fails: the visitor sees the sign-in fail instead of waiting for an email that never comes. It starts working once the site is published; until then WebTwizz sends them.
+
 ## Database
 
 One shared client, server-side only (route handlers, server components, server actions):

@@ -24,7 +24,7 @@ const library = {
 };
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/server.ts', 'src/client.ts', 'src/db.ts', 'src/files.ts'],
+  entry: ['src/index.ts', 'src/server.ts', 'src/client.ts', 'src/db.ts', 'src/files.ts', 'src/emails.ts'],
   format: ['esm'],
   dts: { resolve: [/^@neondatabase\/auth/] },
   clean: true,

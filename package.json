@@ -43,6 +43,10 @@
       "types": "./dist/files.d.ts",
       "default": "./dist/files.js"
     },
+    "./emails": {
+      "types": "./dist/emails.d.ts",
+      "default": "./dist/emails.js"
+    },
     "./AI_GUIDE.md": "./AI_GUIDE.md",
     "./package.json": "./package.json"
   },
