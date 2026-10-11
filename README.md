@@ -40,6 +40,8 @@ npm run build
 
 `test/fixture` is a small Next app that CI builds against the packed tarball.
 
+To try a change in the local WebTwizz preview site without publishing: `npm run preview` builds the package, puts it in the preview container's `node_modules` under a unique dev version, and restarts its dev server (about 10 seconds). `npm run dev` does the same on every save.
+
 ## Releases
 
 - Add a changeset (`npx changeset`) to any PR that changes what sites get.

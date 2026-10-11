@@ -55,7 +55,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "npm run build && vitest run --config vitest.integration.config.ts",
-    "prepublishOnly": "npm run build && npm run typecheck && npm test"
+    "prepublishOnly": "npm run build && npm run typecheck && npm test",
+    "preview": "tsup && node scripts/preview.mjs",
+    "dev": "tsup --watch --onSuccess \"node scripts/preview.mjs\""
   },
   "engines": {
     "node": ">=20"
