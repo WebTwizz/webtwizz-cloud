@@ -19,10 +19,10 @@ jobs:
   unit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: npm
       - run: npm ci
       - run: npm run build
@@ -33,10 +33,10 @@ jobs:
     name: next build with the packed package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: npm
       - run: npm ci
       - run: npm run build
@@ -53,10 +53,10 @@ jobs:
     concurrency:
       group: integration
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 24
+          node-version: 24.22.0
           cache: npm
       - run: npm ci
       - run: npm run build && npm pack

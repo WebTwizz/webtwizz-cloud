@@ -24,13 +24,13 @@ jobs:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 24
+          node-version: 24.22.0
           registry-url: https://registry.npmjs.org
       - run: npm ci
       - name: Version
@@ -57,10 +57,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.next
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 24
+          node-version: 24.22.0
           registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm test
