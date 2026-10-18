@@ -47,6 +47,7 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
     const created = await api('POST', '/projects', {
       project: {
         name: `webtwizz-cloud-ci-${Date.now()}`,
+        region_id: 'aws-us-east-1',
         pg_version: 17,
         branch: { role_name: 'webtwizz', database_name: 'app' },
       },
