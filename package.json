@@ -60,15 +60,15 @@
     "dev": "tsup --watch --onSuccess \"node scripts/preview.mjs\""
   },
   "engines": {
-    "node": ">=20"
+    "node": "v26.13.0"
   },
   "publishConfig": {
     "access": "public",
     "provenance": true
   },
   "peerDependencies": {
-    "next": ">=16.0.0",
-    "react": ">=18.0.0"
+    "next": "16.4.0",
+    "react": "19.3.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1148.0",
