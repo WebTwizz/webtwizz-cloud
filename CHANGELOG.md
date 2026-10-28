@@ -1,5 +1,11 @@
 # @webtwizz/cloud
 
+## 0.4.1
+
+### Patch Changes
+
+- 67343d5: Signed-in visitors can sign out, and `authClient` can read their session: since 0.2.0 the sign-in route answered both with a server error inside Next, because it copied a request Next hands over as a Proxy. Visitors who pressed Sign out stayed signed in.
+
 ## 0.4.0
 
 ### Minor Changes
