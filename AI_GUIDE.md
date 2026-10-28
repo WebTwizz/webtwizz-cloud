@@ -66,6 +66,15 @@ Never destructure `{ user }` from the top level.
 
 8. Every sign-in page gets a "Forgot password?" link to `/reset-password`, a client page in two steps: their email, then `authClient.forgetPassword.emailOtp({ email })`, which emails a 6-digit code; then the code and a new password, then `authClient.emailOtp.resetPassword({ email, otp, password })`, then send them to sign in. Leave `/reset-password` out of the proxy matcher. The owner can also send a reset code from the Data panel, and it lands on this page.
 
+9. Admins are accounts whose role is `'admin'`. Admin pages and admin writes check it on the server, the same way as step 6:
+
+```ts
+const { data: session } = await auth.getSession();
+if (session?.user?.role !== 'admin') return Response.json({ error: 'Admins only' }, { status: 403 });
+```
+
+The first admin is the owner's own account on the site: they sign up like any visitor (their WebTwizz account is separate), then make that account an admin under Users in the Data panel, or ask you to do it. A new role reaches their session within a few minutes, or right away when they sign in again.
+
 Sign-ins are email and password only. Sign-in emails (reset codes, confirmations) are sent for the site automatically; never build email sending or add an email service for them. If the user asks for another way to sign in, say WebTwizz Cloud sign-ins are email and password for now and build that.
 
 Sites built before this package import sign-ins from another package in `src/lib/auth/`. When you work on their sign-ins, move `server.ts`, `client.ts` and the auth route to the files above (same sign-ins, same users) and remove the old package.
@@ -102,6 +111,17 @@ The database can pause or fill up on the owner's plan. Wrap reads and saves in t
 
 Pages that only show data set `export const revalidate = 60`, and the server action that saves calls `revalidatePath` for them. Pages for a signed-in user stay dynamic.
 
+The database runs while pages read or save data and stops after 5 quiet minutes; its running time comes out of the owner's monthly allowance. So a page that refreshes data on a timer (a feed, a chat, a dashboard) refreshes only while the tab is visible, and again when the visitor comes back:
+
+```ts
+useEffect(() => {
+  const refresh = () => { if (document.visibilityState === 'visible') load(); };
+  const timer = setInterval(refresh, 60_000);
+  document.addEventListener('visibilitychange', refresh);
+  return () => { clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
+}, []);
+```
+
 ## Files
 
 Two buckets: `public` (anyone can view, for images shown on the site) and `private` (documents, opened through short-lived links). Images you place on pages yourself keep using the usual image tools; this is for what visitors or the site's features upload.
@@ -132,4 +152,4 @@ Show files with `createFiles().publicUrl(key)` in a plain `<img>` or link, or `a
 
 ## Owner tools
 
-The owner manages users under Users in the Data panel (password reset, block, delete with their rows, export), sets who can sign up and the sign-in emails in Settings > Cloud > Users, and downloads everything from Settings > Cloud > Database. Point them there when they ask.
+The owner manages users under Users in the Data panel (make admin, password reset, block, delete with their rows, export), sets who can sign up and the sign-in emails in Settings > Cloud > Users, and downloads everything from Settings > Cloud > Database. Point them there when they ask.
