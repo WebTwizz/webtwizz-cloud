@@ -14,13 +14,15 @@ export type Auth = ReturnType<typeof createNeonAuth>;
 
 const PROVIDER_HEADER = /^x-neon-/i;
 
-function forLibrary<T extends Request>(request: T, make: (request: T, headers: Headers) => T): T {
+function forLibrary<T extends Request>(request: T, make: (url: string, init: RequestInit & { signal: AbortSignal }) => T): T {
   const cookie = request.headers.get('cookie');
   const translated = cookieHeaderToTheirs(cookie);
   if (translated === cookie) return request;
   const headers = new Headers(request.headers);
   headers.set('cookie', translated as string);
-  return make(request, headers);
+  const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body;
+  // Next hands route handlers a Proxy, which new Request(original) cannot read.
+  return make(request.url, { method: request.method, headers, body, signal: request.signal, ...(body ? { duplex: 'half' } : {}) });
 }
 
 /** What visitors get back: WebTwizz cookie names and none of the sign-in service's own headers. */
@@ -74,7 +76,7 @@ export function createAuth(options: AuthOptions = {}): Auth {
     const methods = handler();
     type Method = (typeof methods)['GET'];
     const wrap = (method: Method): Method => async (request, context) =>
-      forBrowser(await method(forLibrary(request, (original, headers) => new Request(original, { headers })), context));
+      forBrowser(await method(forLibrary(request, (url, init) => new Request(url, init)), context));
     const post = wrap(methods.POST);
     const signUp: Method = async (request, context) => {
       const response = await post(request, context);
@@ -86,7 +88,7 @@ export function createAuth(options: AuthOptions = {}): Auth {
   };
   auth.middleware = (config) => {
     const run = middleware(config);
-    return async (request) => forBrowser(await run(forLibrary(request, (original, headers) => new NextRequest(original, { headers }))));
+    return async (request) => forBrowser(await run(forLibrary(request, (url, init) => new NextRequest(url, init))));
   };
   return auth;
 }

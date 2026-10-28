@@ -165,6 +165,18 @@ describe.skipIf(!key)('WebTwizz Cloud against a throwaway project', () => {
       expect(page.status).toBe(200);
       expect(await page.text()).toContain(email);
       expect((await fetch(`${base}/account`, { redirect: 'manual' })).status).toBe(307);
+
+      const session = await fetch(`${base}/api/auth/get-session`, { headers: { cookie: jar, origin: base } });
+      expect(session.status).toBe(200);
+      expect((await session.json())?.user?.email).toBe(email);
+
+      const signOut = await fetch(`${base}/api/auth/sign-out`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base, cookie: jar }, body: '{}' });
+      expect(signOut.status).toBe(200);
+      const cleared = signOut.headers.getSetCookie().map((cookie) => cookie.split('=')[0]);
+      expect(cleared).toEqual(expect.arrayContaining(cookies.map((cookie) => cookie.split('=')[0])));
+      const token = jar.split('; ').filter((pair) => pair.startsWith('__Secure-webtwizz-auth.session_token='));
+      expect(token).toHaveLength(1);
+      expect(await (await fetch(`${base}/api/me`, { headers: { cookie: token[0] } })).json()).toEqual({ email: null });
     } finally {
       app.kill();
     }

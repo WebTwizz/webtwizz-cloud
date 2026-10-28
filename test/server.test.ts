@@ -47,6 +47,45 @@ describe('forBrowser', () => {
   });
 });
 
+describe('signed-in requests', () => {
+  it('reach the sign-in service under its own cookie names when Next proxies the request', async () => {
+    process.env.WEBTWIZZ_AUTH_URL = 'https://auth.example.com/app/auth';
+    process.env.WEBTWIZZ_AUTH_SECRET = 'x'.repeat(40);
+    const seen: Array<{ path: string; method: string; cookie: string | null; body: string }> = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      seen.push({ path: new URL(request.url).pathname, method: request.method, cookie: request.headers.get('cookie'), body: await request.text() });
+      return new Response('{"success":true}', { headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const nextProxy = (request: Request) => new Proxy(request, {
+      get: (target, key) => {
+        const value = Reflect.get(target, key, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    try {
+      const { GET, POST } = createAuth().handler();
+      const cookie = '__Secure-webtwizz-auth.session_token=abc; theme=dark';
+      const signOut = await POST(
+        nextProxy(new Request('https://site.example.com/api/auth/sign-out', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://site.example.com', cookie }, body: '{}' })),
+        { params: Promise.resolve({ path: ['sign-out'] }) },
+      );
+      expect(signOut.status).toBe(200);
+      const session = await GET(
+        nextProxy(new Request('https://site.example.com/api/auth/get-session', { headers: { origin: 'https://site.example.com', cookie } })),
+        { params: Promise.resolve({ path: ['get-session'] }) },
+      );
+      expect(session.status).toBe(200);
+      expect(seen.find((call) => call.path.endsWith('/sign-out'))).toMatchObject({ method: 'POST', cookie: expect.stringContaining('__Secure-neon-auth.session_token=abc'), body: '{}' });
+      expect(seen.find((call) => call.path.endsWith('/get-session'))?.cookie).toContain('__Secure-neon-auth.session_token=abc');
+      expect(seen.every((call) => !call.cookie?.includes('__Secure-webtwizz-auth.'))).toBe(true);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
+
 describe('sign-up code', () => {
   it('asks for the code after a sign-up that needs confirming, and only then', async () => {
     process.env.WEBTWIZZ_AUTH_URL = 'https://auth.example.com/app/auth';
